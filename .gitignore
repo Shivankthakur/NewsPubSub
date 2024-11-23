@@ -1,0 +1,32 @@
+# Python bytecode files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# SQLite database file (for persistence)
+broker_data.db
+
+# Docker files
+*.log
+*.pid
+docker-compose.override.yml
+
+# IDE or editor specific files
+.idea/
+.vscode/
+
+# System-specific files
+.DS_Store
+Thumbs.db
+
+# Python distribution packages
+*.egg
+*.egg-info/
+dist/
+build/
