@@ -1,12 +1,16 @@
+# election.py
+
 import asyncio
 import logging
+import random
 
 class LeaderElection:
-    def __init__(self, broker_id, peers):
+    def __init__(self, broker_id, peers, failure_chance=0, election_timeout=10):
         self.broker_id = int(broker_id)
         self.peers = [int(peer) for peer in peers if peer]
         self.leader = None
-        self.election_timeout = 10  # Timeout for waiting for higher ID brokers (seconds)
+        self.failure_chance = failure_chance  # Configurable failure chance for peer health check
+        self.election_timeout = election_timeout  # Timeout for waiting for higher ID brokers (seconds)
 
     async def start_leader_election(self, *_):
         """Initiate leader election upon startup."""
@@ -37,4 +41,4 @@ class LeaderElection:
     async def is_alive(self, broker_id):
         """Simulate the check if a higher ID broker is alive (to be replaced by actual health check)."""
         await asyncio.sleep(0.5)  # Simulating network delay or communication with peer
-        return False  # Always returns False (simulated failure)
+        return random.random() > self.failure_chance  # Simulate failure based on configurable chance
