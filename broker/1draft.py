@@ -1,6 +1,8 @@
+# broker.py
+
 import argparse
 import asyncio
-import json  # Ensure this is imported
+import json
 import os
 import logging
 from util import logger_config
@@ -16,6 +18,7 @@ parser = argparse.ArgumentParser(description="Start a broker instance.")
 parser.add_argument('--broker_id', type=int, required=True, help="Broker ID")
 parser.add_argument('--port', type=int, required=True, help="Port to run the broker on")
 parser.add_argument('--peers', type=str, required=False, help="Comma-separated list of peer broker IDs")
+parser.add_argument('--config_file', type=str, required=False, help="Path to the spanning tree config file")
 args = parser.parse_args()
 
 # Broker configurations
@@ -23,43 +26,27 @@ BROKER_ID = args.broker_id
 PORT = args.port
 HOST = "0.0.0.0"  # Listen on all interfaces
 
-# Set PEER_IDS dynamically from the --peers argument or fall back to empty list
+# Set PEER_IDS dynamically from the --peers argument or fall back to an empty list
 if args.peers:
     PEER_IDS = args.peers.split(",")
 else:
     PEER_IDS = []
     logging.warning("No peers defined. Please provide the --peers argument.")
 
+# Path to the config file for spanning tree (optional)
+CONFIG_FILE = args.config_file
+
 # Log the CLI args and configuration parameters
 logging.debug(f"CLI Arguments: broker_id={BROKER_ID}, port={PORT}")
 logging.debug(f"PEER_IDS: {PEER_IDS}")
+if CONFIG_FILE:
+    logging.debug(f"Spanning tree config file: {CONFIG_FILE}")
 
 # Initialize components
 data_store = DataStore()
 heartbeat = Heartbeat(BROKER_ID, PEER_IDS)
 leader_election = LeaderElection(BROKER_ID, PEER_IDS)
-replication = DataReplication(data_store, BROKER_ID, PEER_IDS, port=PORT)
-
-# This line ensures spanning tree is built before replication is attempted
-async def build_tree_and_start():
-    """Build the spanning tree and then start the server."""
-    try:
-        await replication.build_spanning_tree()
-        logging.info(f"Spanning tree built for Broker {BROKER_ID}: {replication.spanning_tree}")
-        
-        # Start the server and block to keep it open
-        app = await start_server()
-        # Awaiting the server to run and handle requests
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, HOST, PORT)
-        await site.start()
-        logging.info(f"Broker {BROKER_ID} is now running at http://{HOST}:{PORT}")
-        # Keep the server running
-        while True:
-            await asyncio.sleep(3600)  # Sleep for 1 hour, preventing server from exiting
-    except Exception as e:
-        logging.exception(f"Error building spanning tree for Broker {BROKER_ID}: {e}")
+replication = DataReplication(data_store, BROKER_ID, PEER_IDS, port=PORT, config_file=CONFIG_FILE)
 
 # REST API routes
 async def publish(request):
@@ -80,7 +67,7 @@ async def publish(request):
         else:
             return web.json_response({"status": "failure", "message": "Duplicate message detected."})
     except Exception as e:
-        logging.exception(f"Error in publish route: {e}")
+        logging.error(f"Error in publish route: {e}")
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
 async def get_data(request):
@@ -95,7 +82,7 @@ async def get_data(request):
 
         return web.json_response({"topic": topic, "messages": messages})
     except Exception as e:
-        logging.exception(f"Error in get_data route: {e}")
+        logging.error(f"Error in get_data route: {e}")
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
 async def test_broker(request):
@@ -116,10 +103,10 @@ async def cleanup_background_tasks(app):
     await asyncio.gather(app['heartbeat_task'], app['leader_election_task'], return_exceptions=True)
 
 # Server startup
-async def start_server():
+async def init_app():
     """Initialize the application and add routes and background tasks."""
     app = web.Application()
-
+    
     # Routes
     app.router.add_get('/test', test_broker)
     app.router.add_post('/publish', publish)
@@ -135,6 +122,6 @@ if __name__ == '__main__':
     logging.info(f"Starting broker {BROKER_ID} on {HOST}:{PORT}...")
     logging.debug(f"PEER_IDS: {PEER_IDS}")  # Debug log to check PEER_IDS
     try:
-        asyncio.run(build_tree_and_start())
+        web.run_app(init_app(), host=HOST, port=PORT, shutdown_timeout=60)
     except Exception as e:
-        logging.exception(f"Failed to start the broker: {e}")
+        logging.error(f"Failed to start the broker: {e}")

@@ -13,7 +13,8 @@ ENV/
 broker_data.db
 
 # local persistence files
-broker/*.json
+broker/data_store.json
+broker/dedup_store.json
 
 # Docker files
 *.log
