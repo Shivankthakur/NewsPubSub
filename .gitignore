@@ -12,6 +12,9 @@ ENV/
 # SQLite database file (for persistence)
 broker_data.db
 
+# local persistence files
+broker/*.json
+
 # Docker files
 *.log
 *.pid

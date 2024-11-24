@@ -1,5 +1,3 @@
-# broker.py
-
 import argparse
 import asyncio
 import json
@@ -10,9 +8,10 @@ from heartbeat import Heartbeat
 from election import LeaderElection
 from replication import DataReplication
 from data_store import DataStore
+import uuid
 
 # Enable logging
-logging.basicConfig(level=logging.DEBUG)  # Change logging level to DEBUG for detailed logs
+logging.basicConfig(level=logging.DEBUG)
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description="Start a broker instance.")
@@ -50,15 +49,17 @@ async def publish(request):
         data = await request.json()
         topic = data.get("topic")
         message = data.get("message")
+        message_id = data.get("message_id", str(uuid.uuid4()))  # Generate or receive a message ID
 
         # Log incoming request
         logging.debug(f"Publish request received: {data}")
 
         # Store the message locally and replicate to other brokers
-        data_store.store_message(topic, message)
-        await replication.replicate_message(topic, message)
-
-        return web.json_response({"status": "success"})
+        if data_store.store_message(topic, message, message_id):
+            await replication.replicate_message(topic, message, message_id)
+            return web.json_response({"status": "success"})
+        else:
+            return web.json_response({"status": "failure", "message": "Duplicate message detected."})
     except Exception as e:
         logging.error(f"Error in publish route: {e}")
         return web.json_response({"status": "error", "message": str(e)}, status=500)

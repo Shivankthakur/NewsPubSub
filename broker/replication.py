@@ -1,5 +1,3 @@
-# replication.py
-
 import asyncio
 import logging
 import aiohttp
@@ -10,11 +8,11 @@ class DataReplication:
         self.broker_id = broker_id
         self.peers = peers
         self.port = port  # Local port for this broker
-        logging.basicConfig(level=logging.DEBUG)  # Set the logging level to DEBUG for more verbosity
+        logging.basicConfig(level=logging.DEBUG)
 
-    async def replicate_message(self, topic, message):
+    async def replicate_message(self, topic, message, message_id):
         """Replicate the message to all peers, ensuring no duplicate replication."""
-        logging.debug(f"Attempting to replicate message '{message}' for topic '{topic}'")
+        logging.debug(f"Attempting to replicate message '{message}' for topic '{topic}' with ID {message_id}")
         
         # Replicate the message to all peers except the current broker
         for peer in self.peers:
@@ -22,13 +20,13 @@ class DataReplication:
                 logging.debug(f"Skipping replication to self (Broker {self.broker_id})")
                 continue  # Skip replicating to self
             
-            # Send the message to the peer, regardless of whether it exists locally
-            await self.send_to_peer(peer, topic, message)
+            # Send the message to the peer
+            await self.send_to_peer(peer, topic, message, message_id)
 
-    async def send_to_peer(self, peer, topic, message):
+    async def send_to_peer(self, peer, topic, message, message_id):
         """Send a message to a peer broker."""
         try:
-            logging.debug(f"Preparing to send message '{message}' for topic '{topic}' to Broker {peer}")
+            logging.debug(f"Preparing to send message '{message}' for topic '{topic}' with ID {message_id} to Broker {peer}")
 
             # Ensure peer is not empty and can be converted to integer
             if not peer:
@@ -44,7 +42,8 @@ class DataReplication:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json={
                     "topic": topic,
-                    "message": message
+                    "message": message,
+                    "message_id": message_id  # Include message ID for deduplication
                 }) as response:
                     if response.status != 200:
                         logging.error(f"Failed to replicate message to Broker {peer} (HTTP Status: {response.status})")
@@ -54,4 +53,3 @@ class DataReplication:
             logging.error(f"Error replicating to Broker {peer}: Invalid value encountered - {e}")
         except Exception as e:
             logging.error(f"Unexpected error replicating to Broker {peer}: {e}")
-
