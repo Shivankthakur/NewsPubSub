@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from util import logger_config
 import aiohttp
 
 class DataReplication:

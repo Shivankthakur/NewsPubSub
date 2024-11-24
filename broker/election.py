@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from util import logger_config
 import random
 
 class LeaderElection:

@@ -3,6 +3,7 @@ import asyncio
 import json
 import os
 import logging
+from util import logger_config
 from aiohttp import web
 from heartbeat import Heartbeat
 from election import LeaderElection
@@ -10,8 +11,14 @@ from replication import DataReplication
 from data_store import DataStore
 import uuid
 
-# Enable logging
-logging.basicConfig(level=logging.DEBUG)
+# Enable logging with additional context
+# logging.basicConfig(
+#     level=logging.DEBUG,
+#     format='%(asctime)s | %(levelname)s | PID:%(process)d | %(filename)s:%(lineno)d | %(message)s',
+#     datefmt='%Y-%m-%d %H:%M:%S'
+# )
+# # Enable logging
+# logging.basicConfig(level=logging.DEBUG)
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description="Start a broker instance.")
