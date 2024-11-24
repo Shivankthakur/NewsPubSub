@@ -12,24 +12,15 @@ Project Structure
 
 distributed-pubsub/
 ├── broker/
-│   ├── broker.py              # Main broker application
-│   ├── api.py                 # REST API for brokers
-│   ├── heartbeat.py           # Real-time failure detection
-│   ├── election.py            # Fully functional leader election algorithm
-│   ├── replication.py         # Data replication with consistency checks
-│   ├── data_store.py          # Message persistence (using SQLite for simplicity)
-│   ├── broker_config.py       # Config and utility functions
-│   ├── requirements.txt       # Dependencies list
-│   └── Dockerfile             # Docker configuration for broker
-├── client/
-│   ├── client.py              # Publisher and Subscriber client
-│   ├── client_config.py       # Configurations for the client
-│   └── requirements.txt       # Dependencies for the client
-├── tests/
-│   ├── test_publish.py        # Test script for publish and subscription
-│   └── test_failover.py       # Test script for failover and leader election
-├── docker-compose.yml         # Orchestration for broker nodes
-└── README.md                  # Project documentation
+│   ├── broker.py                  # Main broker application with API endpoints
+│   ├── data_store.py              # Local data store for the broker
+│   ├── election.py                # Leader election algorithm implementation
+│   ├── heartbeat.py               # Heartbeat failure detection mechanism
+│   ├── replication.py             # Data replication mechanism
+│   └── requirements.txt           # Python dependencies
+├── Dockerfile                     # Dockerfile for the broker
+├── docker-compose.yml             # Docker Compose configuration to run multiple brokers
+└── README.md                      # Instructions for running the project
 
 
 
