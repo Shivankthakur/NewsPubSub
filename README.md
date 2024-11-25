@@ -85,3 +85,13 @@ The leader election follows a simple Bully Election Algorithm, where the broker 
 ### **3. Data Replication**
 When a message is published to a broker, it stores the message and replicates it to all its peers. The replication ensures data consistency across all brokers.
 
+
+### client
+
+```
+python3 client_interface.py --mode publish --topic "news" --message "New article on distributed systems"
+```
+
+```
+python3 client_interface.py --mode subscribe --topic "news" 
+```
