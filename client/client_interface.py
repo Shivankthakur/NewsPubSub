@@ -6,6 +6,13 @@ BROKER_ADDRESSES = [
     "http://127.0.0.1:3000",
     "http://127.0.0.1:3001",
     "http://127.0.0.1:3002",
+    "http://127.0.0.1:3003",
+    "http://127.0.0.1:3004",
+    "http://127.0.0.1:3005",
+    "http://127.0.0.1:3006",
+    "http://127.0.0.1:3007",
+    "http://127.0.0.1:3008",
+    "http://127.0.0.1:3009",
 ]
 
 
@@ -42,20 +49,15 @@ async def subscribe_topic_adaptive(
                 async with session.get(url) as response:
                     if response.status == 200:
                         try:
-                            # Attempt to parse the response as JSON
-                            raw_response = await response.text()
-                            print(
-                                f"Raw response: {raw_response}"
+                            raw_response = (
+                                await response.text()
                             )  # Debugging: Log the raw response
-
-                            # Parse the JSON response
                             messages = await response.json()
                             if (
                                 isinstance(messages, dict)
                                 and "messages" in messages
                                 and isinstance(messages["messages"], list)
                             ):
-                                # Check if there are new messages
                                 latest_message = messages["messages"][
                                     -1
                                 ]  # Get the latest message
@@ -66,31 +68,26 @@ async def subscribe_topic_adaptive(
                                     last_message = latest_message
                                     current_interval = max(
                                         min_interval, current_interval // 2
-                                    )  # Decrease interval
+                                    )
                                 else:
                                     print(f"No new messages for topic '{topic}'")
                                     current_interval = min(
                                         max_interval, current_interval + 1
-                                    )  # Increase interval
+                                    )
                             else:
                                 print(f"Unexpected response structure: {messages}")
                                 current_interval = min(
                                     max_interval, current_interval + 1
-                                )  # Increase interval
+                                )
                         except aiohttp.ContentTypeError:
-                            # Handle case where response is not JSON
                             raw_response = await response.text()
                             print(
                                 f"Error: Response is not valid JSON. Raw response: {raw_response}"
                             )
-                            current_interval = min(
-                                max_interval, current_interval + 1
-                            )  # Increase interval
+                            current_interval = min(max_interval, current_interval + 1)
                     elif response.status == 204:
                         print(f"No new messages for topic '{topic}' (204 No Content)")
-                        current_interval = min(
-                            max_interval, current_interval + 1
-                        )  # Increase interval
+                        current_interval = min(max_interval, current_interval + 1)
                     else:
                         print(
                             f"Error: Received unexpected status code {response.status}"
@@ -98,27 +95,38 @@ async def subscribe_topic_adaptive(
 
             except aiohttp.ClientError as e:
                 print(f"Connection error while polling for topic '{topic}': {e}")
-                current_interval = min(
-                    max_interval, current_interval + 1
-                )  # Increase interval
+                current_interval = min(max_interval, current_interval + 1)
             except Exception as e:
                 print(f"An unexpected error occurred: {e}")
-                current_interval = min(
-                    max_interval, current_interval + 1
-                )  # Increase interval
+                current_interval = min(max_interval, current_interval + 1)
 
-            # Wait for the current polling interval
             print(f"Polling again in {current_interval} seconds...\n")
             await asyncio.sleep(current_interval)
+
+
+async def fetch_messages(topic):
+    """Fetch messages for a topic from all brokers."""
+    async with aiohttp.ClientSession() as session:
+        for broker_url in BROKER_ADDRESSES:
+            url = f"{broker_url}/data/{topic}"
+            try:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        messages = await response.json()
+                        print(f"Messages from {broker_url}: {messages}")
+                    else:
+                        print(f"Failed to fetch from {broker_url}: {response.status}")
+            except Exception as e:
+                print(f"Error fetching messages from {broker_url}: {e}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Client Interface for Pub-Sub System")
     parser.add_argument(
         "--mode",
-        choices=["publish", "subscribe"],
+        choices=["publish", "subscribe", "fetch"],
         required=True,
-        help="Mode: publish or subscribe",
+        help="Mode: publish, subscribe, or fetch",
     )
     parser.add_argument("--topic", type=str, required=True, help="Topic name")
     parser.add_argument(
@@ -141,3 +149,5 @@ if __name__ == "__main__":
                 args.topic, min_interval=1, max_interval=10, default_interval=5
             )
         )
+    elif args.mode == "fetch":
+        asyncio.run(fetch_messages(args.topic))

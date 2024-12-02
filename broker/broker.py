@@ -7,6 +7,7 @@ from heartbeat import Heartbeat
 from election import LeaderElection
 from replication import DataReplication
 from datatable import DataStore  # Database handler
+import aiohttp
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description="Start a broker instance.")
@@ -141,6 +142,7 @@ async def start_background_tasks(app):
     app["leader_election_task"] = asyncio.create_task(
         leader_election.start_leader_election()
     )
+    await replication.start_background_tasks(app)
 
 
 async def cleanup_background_tasks(app):
@@ -150,6 +152,8 @@ async def cleanup_background_tasks(app):
     await asyncio.gather(
         app["heartbeat_task"], app["leader_election_task"], return_exceptions=True
     )
+    # Stop replication retries
+    await replication.stop_background_tasks(app)
     # Close the database connection
     data_store.close()
 
