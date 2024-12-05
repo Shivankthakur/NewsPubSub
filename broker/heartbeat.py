@@ -1,22 +1,24 @@
-# heartbeat.py
+# File: heartbeat.py
 
 import asyncio
+from util import logger_config
 import logging
 from aiohttp import ClientSession, ClientTimeout
 
 class Heartbeat:
-    def __init__(self, broker_id, peers, failure_timeout=2, heartbeat_interval=5):
+    def __init__(self, broker_id, failure_timeout=2, heartbeat_interval=5, on_peer_failure=None):
         """
         :param broker_id: ID of the current broker
-        :param peers: List of peer broker IDs
         :param failure_timeout: Timeout in seconds to consider a peer failed
         :param heartbeat_interval: Interval in seconds to send heartbeats
+        :param on_peer_failure: Callback function to handle peer failure (e.g., updating membership)
         """
         self.broker_id = int(broker_id)
-        self.peers = [int(peer) for peer in peers if peer]
+        self.peers = []  # Initialize with an empty list; dynamic updates will populate it
         self.failed_peers = set()
         self.failure_timeout = failure_timeout
         self.heartbeat_interval = heartbeat_interval
+        self.on_peer_failure = on_peer_failure  # Callback for handling peer failures
 
     async def start_heartbeat(self, *_):
         """Start heartbeat monitoring as a background task."""
@@ -34,6 +36,10 @@ class Heartbeat:
                 if peer not in self.failed_peers:
                     logging.warning(f"Peer {peer} has failed.")
                     self.failed_peers.add(peer)
+                    # Invoke the callback for peer failure
+                    if self.on_peer_failure:
+                        logging.debug(f"Invoking callback for failed peer {peer}")
+                        await self.on_peer_failure(peer)
             else:
                 if peer in self.failed_peers:
                     logging.info(f"Peer {peer} is back online.")

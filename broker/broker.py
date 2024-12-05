@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import logging
+from util import logger_config
 import uuid
 from aiohttp import web
 from heartbeat import Heartbeat
@@ -10,14 +11,14 @@ from election import LeaderElection
 from replication import DataReplication
 from datatable import DataStore  # Database handler
 import aiohttp
+from membership import Membership
+
+logger_config.setup_logger()
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description="Start a broker instance.")
 parser.add_argument("--broker_id", type=int, required=True, help="Broker ID")
 parser.add_argument("--port", type=int, required=True, help="Port to run the broker on")
-parser.add_argument(
-    "--peers", type=str, required=False, help="Comma-separated list of peer broker IDs"
-)
 parser.add_argument(
     "--registry",
     type=str,
@@ -32,47 +33,38 @@ PORT = args.port
 HOST = "0.0.0.0"  # Listen on all interfaces
 REGISTRY_URL = args.registry
 
-# Parse peer IDs if provided
-PEER_IDS = args.peers.split(",") if args.peers else []
-
 # Initialize components
 data_store = DataStore()  # SQLite database for storing messages
-heartbeat = Heartbeat(BROKER_ID, PEER_IDS)  # Pass current broker ID and peers
-leader_election = LeaderElection(BROKER_ID, PEER_IDS)
-replication = DataReplication(data_store, BROKER_ID, PEER_IDS, port=PORT)
+heartbeat = Heartbeat(BROKER_ID)  # Heartbeat without initial peers
+# Modify this line to initialize without peers initially
+leader_election = LeaderElection(BROKER_ID, peers=[])
+replication = DataReplication(data_store, BROKER_ID, port=PORT)
 
+async def on_membership_change(new_members):
+    """Handle membership changes."""
+    peers = list(new_members - {BROKER_ID})  # Exclude self
+    replication.update_peers(peers)
+    heartbeat.update_peers(peers)
+    logging.info(f"Updated peers on membership change: {peers}")
+
+# Pass callback to Membership
+membership = Membership(BROKER_ID, REGISTRY_URL, on_membership_change=on_membership_change)
 
 async def discover_peers():
-    """Discover peers dynamically from a registry service."""
-    global replication, heartbeat, PEER_IDS
-    if REGISTRY_URL:
-        try:
-            logging.info(
-                f"Contacting registry service at {REGISTRY_URL} to discover peers..."
-            )
-            async with aiohttp.ClientSession() as session:
-                async with session.get(f"{REGISTRY_URL}/peers/{BROKER_ID}") as response:
-                    if response.status == 200:
-                        peers = await response.json()
-                        PEER_IDS.clear()  # Clear the current peers
-                        PEER_IDS.extend(peers)  # Add the new peers
-                        replication.update_peers(peers)  # Update peers in Replication
-                        heartbeat.update_peers(peers)  # Update peers in Heartbeat
-                        logging.info(f"Discovered peers: {peers}")
-                    else:
-                        logging.warning(
-                            f"Failed to contact registry: {response.status}"
-                        )
-        except Exception as e:
-            logging.exception(f"Error discovering peers: {e}")
-    else:
-        logging.warning("No registry URL provided. Running without peer discovery.")
+    """Discover peers dynamically using the membership list."""
+    global replication, heartbeat, leader_election
+    await membership.fetch_members()
+    peers = list(membership.members - {BROKER_ID})  # Exclude self
+    replication.update_peers(peers)
+    heartbeat.update_peers(peers)
+    leader_election.peers = peers  # Update peers for leader election
+    logging.info(f"Discovered peers: {peers}")
 
 
 async def build_tree_and_start():
     """Build the spanning tree and start the server."""
     try:
-        await discover_peers()  # Dynamically discover peers if registry is available
+        await discover_peers()  # Dynamically discover peers from membership
         await replication.build_spanning_tree()
         logging.info(
             f"Spanning tree built for Broker {BROKER_ID}: {replication.spanning_tree}"
@@ -136,10 +128,10 @@ async def heartbeat_check(request):
     """Health check endpoint for broker."""
     return web.Response(text=f"Broker {BROKER_ID} is healthy and running.")
 
-
 # Background task for heartbeat and leader election
 async def start_background_tasks(app):
     """Start background tasks."""
+    app["membership_task"] = asyncio.create_task(membership.start_membership_service())
     app["heartbeat_task"] = asyncio.create_task(heartbeat.start_heartbeat())
     app["leader_election_task"] = asyncio.create_task(
         leader_election.start_leader_election()
