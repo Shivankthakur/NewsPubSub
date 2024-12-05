@@ -1,3 +1,5 @@
+# broker.py
+
 import argparse
 import asyncio
 import logging
@@ -130,9 +132,9 @@ async def get_data(request):
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
 
-async def test_broker(request):
-    """Simple health check route."""
-    return web.Response(text=f"Broker {BROKER_ID} is UP and RUNNING.")
+async def heartbeat_check(request):
+    """Health check endpoint for broker."""
+    return web.Response(text=f"Broker {BROKER_ID} is healthy and running.")
 
 
 # Background task for heartbeat and leader election
@@ -161,7 +163,7 @@ async def cleanup_background_tasks(app):
 async def start_server():
     """Initialize the application and add routes."""
     app = web.Application()
-    app.router.add_get("/test", test_broker)
+    app.router.add_get("/heartbeat", heartbeat_check)
     app.router.add_post("/publish", publish)
     app.router.add_get("/data/{topic}", get_data)
     app.on_startup.append(start_background_tasks)
