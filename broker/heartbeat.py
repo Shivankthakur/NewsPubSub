@@ -21,6 +21,7 @@ class Heartbeat:
     async def start_heartbeat(self, *_):
         """Start heartbeat monitoring as a background task."""
         while True:
+            logging.debug("Heartbeat is working...")
             await self.check_peers()
             await self.log_peer_status()  # Log online and failed peers
             await asyncio.sleep(self.heartbeat_interval)
