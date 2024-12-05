@@ -34,21 +34,19 @@ def register():
         return "Internal Server Error", 500
 
 
-@app.route("/deregister", methods=["POST"])
-def deregister():
-    """Deregister an existing broker."""
+@app.route("/remove/<int:broker_id>", methods=["DELETE"])
+def remove_broker(broker_id):
+    """Remove a broker from the registry."""
     try:
-        data = request.json
-        broker_id = data.get("broker_id")
         if broker_id in members:
             members.remove(broker_id)
-            logging.info(f"Broker {broker_id} deregistered successfully.")
-            return f"Broker {broker_id} deregistered", 200
+            logging.info(f"Broker {broker_id} removed from registry.")
+            return f"Broker {broker_id} removed", 200
         else:
-            logging.warning(f"Deregistration failed: Broker {broker_id} not found.")
+            logging.warning(f"Remove failed: Broker {broker_id} not found.")
             return "Broker not found", 404
     except Exception as e:
-        logging.exception("Error during deregistration:")
+        logging.exception("Error during broker removal:")
         return "Internal Server Error", 500
 
 

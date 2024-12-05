@@ -5,6 +5,8 @@ from util import logger_config
 import logging
 from aiohttp import ClientSession, ClientTimeout
 
+logger_config.setup_logger()
+
 class Heartbeat:
     def __init__(self, broker_id, failure_timeout=2, heartbeat_interval=5, on_peer_failure=None):
         """
@@ -39,7 +41,7 @@ class Heartbeat:
                     # Invoke the callback for peer failure
                     if self.on_peer_failure:
                         logging.debug(f"Invoking callback for failed peer {peer}")
-                        await self.on_peer_failure(peer)
+                        await self.on_peer_failure(peer)  # Handle peer failure (e.g., update registry)
             else:
                 if peer in self.failed_peers:
                     logging.info(f"Peer {peer} is back online.")

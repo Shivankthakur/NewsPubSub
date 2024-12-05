@@ -50,6 +50,26 @@ async def on_membership_change(new_members):
 # Pass callback to Membership
 membership = Membership(BROKER_ID, REGISTRY_URL, on_membership_change=on_membership_change)
 
+async def on_peer_failure(failed_peer):
+    """Handle peer failure (invoke registry to remove failed broker)."""
+    logging.info(f"Handling failure for peer {failed_peer}")
+    if REGISTRY_URL:
+        try:
+            url = f"{REGISTRY_URL}/remove/{failed_peer}"
+            async with aiohttp.ClientSession() as session:
+                async with session.delete(url) as response:
+                    if response.status == 200:
+                        logging.info(f"Successfully removed broker {failed_peer} from registry.")
+                    else:
+                        logging.warning(f"Failed to remove broker {failed_peer} from registry (HTTP {response.status}).")
+        except Exception as e:
+            logging.error(f"Error removing broker {failed_peer} from registry: {e}")
+    else:
+        logging.warning("Registry URL is not defined. Broker removal will not be performed.")
+
+# Pass the failure callback to Heartbeat
+heartbeat.on_peer_failure = on_peer_failure
+
 async def discover_peers():
     """Discover peers dynamically using the membership list."""
     global replication, heartbeat, leader_election

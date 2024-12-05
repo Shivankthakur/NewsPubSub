@@ -42,6 +42,25 @@ class Membership:
         except Exception as e:
             logging.exception(f"Error registering with registry: {e}")
 
+    async def remove_broker(self, broker_id):
+        """Remove a broker from the registry (used when a broker fails)."""
+        if not self.registry_url:
+            logging.warning("No registry URL provided; running standalone.")
+            return
+
+        try:
+            logging.info(f"Removing Broker {broker_id} from registry at {self.registry_url}.")
+            async with aiohttp.ClientSession() as session:
+                async with session.delete(
+                    f"{self.registry_url}/remove/{broker_id}"
+                ) as response:
+                    if response.status == 200:
+                        logging.info(f"Broker {broker_id} removed from registry.")
+                    else:
+                        logging.warning(f"Failed to remove broker {broker_id} from registry (HTTP {response.status}).")
+        except Exception as e:
+            logging.exception(f"Error removing broker {broker_id} from registry: {e}")
+
     async def fetch_members(self):
         """Fetch the latest membership list from the registry."""
         if not self.registry_url:
@@ -82,3 +101,7 @@ class Membership:
         while True:
             await self.fetch_members()
             await asyncio.sleep(self.update_interval)
+
+    async def on_peer_failure(self, failed_peer):
+        """Callback to handle failed broker."""
+        await self.remove_broker(failed_peer)  # Remove the failed broker from the registry
