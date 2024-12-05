@@ -44,6 +44,9 @@ class Membership:
 
     async def remove_broker(self, broker_id):
         """Remove a broker from the registry (used when a broker fails)."""
+        if broker_id in self.members:
+            self.members.remove(broker_id)  # Ensure broker is removed from internal list
+            logging.info(f"Broker {broker_id} removed from internal membership list.")
         if not self.registry_url:
             logging.warning("No registry URL provided; running standalone.")
             return

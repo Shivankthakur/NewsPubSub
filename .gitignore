@@ -11,6 +11,7 @@ ENV/
 
 # SQLite database file (for persistence)
 broker_data.db
+broker/data_store.db
 
 # local persistence files
 broker/data_store.json
