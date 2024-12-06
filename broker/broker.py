@@ -1,5 +1,3 @@
-# broker.py
-
 import argparse
 import asyncio
 import logging
@@ -36,9 +34,9 @@ REGISTRY_URL = args.registry
 # Initialize components
 data_store = DataStore()  # SQLite database for storing messages
 heartbeat = Heartbeat(BROKER_ID)  # Heartbeat without initial peers
-# Modify this line to initialize without peers initially
 leader_election = LeaderElection(BROKER_ID, peers=[])
 replication = DataReplication(data_store, BROKER_ID, port=PORT)
+
 
 async def on_membership_change(new_members):
     """Handle membership changes."""
@@ -47,8 +45,11 @@ async def on_membership_change(new_members):
     heartbeat.update_peers(peers)
     logging.info(f"Updated peers on membership change: {peers}")
 
-# Pass callback to Membership
-membership = Membership(BROKER_ID, REGISTRY_URL, on_membership_change=on_membership_change)
+
+membership = Membership(
+    BROKER_ID, REGISTRY_URL, on_membership_change=on_membership_change
+)
+
 
 async def on_peer_failure(failed_peer):
     """Handle peer failure (invoke registry to remove failed broker)."""
@@ -59,16 +60,24 @@ async def on_peer_failure(failed_peer):
             async with aiohttp.ClientSession() as session:
                 async with session.delete(url) as response:
                     if response.status == 200:
-                        logging.info(f"Successfully removed broker {failed_peer} from registry.")
+                        logging.info(
+                            f"Successfully removed broker {failed_peer} from registry."
+                        )
                     else:
-                        logging.warning(f"Failed to remove broker {failed_peer} from registry (HTTP {response.status}).")
+                        logging.warning(
+                            f"Failed to remove broker {failed_peer} from registry (HTTP {response.status})."
+                        )
         except Exception as e:
             logging.error(f"Error removing broker {failed_peer} from registry: {e}")
     else:
-        logging.warning("Registry URL is not defined. Broker removal will not be performed.")
+        logging.warning(
+            "Registry URL is not defined. Broker removal will not be performed."
+        )
+
 
 # Pass the failure callback to Heartbeat
 heartbeat.on_peer_failure = on_peer_failure
+
 
 async def discover_peers():
     """Discover peers dynamically using the membership list."""
@@ -147,6 +156,7 @@ async def get_data(request):
 async def heartbeat_check(request):
     """Health check endpoint for broker."""
     return web.Response(text=f"Broker {BROKER_ID} is healthy and running.")
+
 
 # Background task for heartbeat and leader election
 async def start_background_tasks(app):

@@ -13,41 +13,49 @@ class DataStore:
         :param db_file: File path for the SQLite database.
         """
         self.db_file = db_file
-        self.conn = sqlite3.connect(db_file, check_same_thread=False)  # Enable multi-threaded access
-        self.create_tables()
+        self.conn = sqlite3.connect(
+            db_file, check_same_thread=False
+        )  # Enable multi-threaded access
+        self.conn.row_factory = sqlite3.Row
 
-    def create_tables(self):
+    def create_topic_table(self, topic):
         """
-        Create a table for storing messages if it does not exist.
+        Create a table dynamically for the specified topic if it does not exist.
+
+        :param topic: The topic name for the new table.
         """
+        table_name = self._sanitize_table_name(topic)
         with self.conn:
             self.conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS messages (
+                f"""
+                CREATE TABLE IF NOT EXISTS {table_name} (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     message_id TEXT UNIQUE NOT NULL,
-                    topic TEXT NOT NULL,
                     message TEXT NOT NULL,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
                 """
             )
+        print(f"Table '{table_name}' created or already exists.")
 
     def store_message(self, topic, message, message_id):
         """
-        Insert a message into the database under the specified topic.
+        Insert a message into the database under the specified topic (table).
 
-        :param topic: Topic to which the message belongs.
+        :param topic: Topic to which the message belongs (table name).
         :param message: The content of the message.
         :param message_id: Unique identifier for the message.
         :return: True if the message was successfully stored, False otherwise.
         """
+        table_name = self._sanitize_table_name(topic)
+        self.create_topic_table(topic)  # Ensure the table exists
         try:
             with self.conn:
                 self.conn.execute(
-                    "INSERT INTO messages (message_id, topic, message) VALUES (?, ?, ?)",
-                    (message_id, topic, message),
+                    f"INSERT INTO {table_name} (message_id, message) VALUES (?, ?)",
+                    (message_id, message),
                 )
+            print(f"Message stored successfully: {topic} -> {message}")
             return True
         except sqlite3.IntegrityError:
             print(f"Duplicate message detected: {message_id}")
@@ -55,43 +63,55 @@ class DataStore:
 
     def get_messages(self, topic, batch_size=5, start_offset=0):
         """
-        Retrieve messages for a specific topic with pagination support.
+        Retrieve messages for a specific topic (table) with pagination support.
 
-        :param topic: Topic to fetch messages for.
+        :param topic: Topic (table name) to fetch messages for.
         :param batch_size: Number of messages to retrieve in a single batch.
         :param start_offset: Offset for pagination (default is 0).
         :return: A list of messages for the topic.
         """
-        with self.conn:
-            cursor = self.conn.execute(
-                """
-                SELECT message
-                FROM messages
-                WHERE topic = ?
-                ORDER BY timestamp ASC
-                LIMIT ? OFFSET ?
-                """,
-                (topic, batch_size, start_offset),
-            )
-            return [row[0] for row in cursor.fetchall()]
+        table_name = self._sanitize_table_name(topic)
+        try:
+            with self.conn:
+                cursor = self.conn.execute(
+                    f"""
+                    SELECT message
+                    FROM {table_name}
+                    ORDER BY timestamp ASC
+                    LIMIT ? OFFSET ?
+                    """,
+                    (batch_size, start_offset),
+                )
+                messages = [row["message"] for row in cursor.fetchall()]
+                print(f"Fetched messages for topic '{topic}': {messages}")
+                return messages
+        except sqlite3.OperationalError:
+            print(f"Topic '{topic}' does not exist.")
+            return []
 
     def delete_topic(self, topic):
         """
-        Delete all messages under the specified topic.
+        Drop the table for the specified topic.
 
-        :param topic: The topic to delete.
+        :param topic: The topic (table name) to delete.
         """
+        table_name = self._sanitize_table_name(topic)
         with self.conn:
-            self.conn.execute(
-                "DELETE FROM messages WHERE topic = ?", (topic,)
-            )
-        print(f"All messages under topic '{topic}' have been deleted.")
+            self.conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+        print(f"Table for topic '{topic}' has been deleted.")
 
     def close(self):
         """
         Close the database connection.
         """
         self.conn.close()
+
+    @staticmethod
+    def _sanitize_table_name(topic):
+        """
+        Sanitize the topic name to ensure it can be safely used as a table name.
+        """
+        return topic.replace(" ", "_").replace("-", "_").lower()
 
 
 # # Example usage:
