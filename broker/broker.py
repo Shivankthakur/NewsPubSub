@@ -34,7 +34,6 @@ REGISTRY_URL = args.registry
 # Initialize components
 data_store = DataStore()  # SQLite database for storing messages
 heartbeat = Heartbeat(BROKER_ID)  # Heartbeat without initial peers
-leader_election = LeaderElection(BROKER_ID, peers=[])
 replication = DataReplication(data_store, BROKER_ID, port=PORT)
 
 
@@ -45,9 +44,16 @@ async def on_membership_change(new_members):
     heartbeat.update_peers(peers)
     logging.info(f"Updated peers on membership change: {peers}")
 
+    # Start leader election if the membership changes
+    await leader_election.start_leader_election()
+
 
 membership = Membership(
     BROKER_ID, REGISTRY_URL, on_membership_change=on_membership_change
+)
+# Initialize LeaderElection with dynamic peers (initially empty)
+leader_election = LeaderElection(
+    BROKER_ID, peers=[], membership_service=membership
 )
 
 
@@ -172,7 +178,7 @@ async def start_background_tasks(app):
 async def cleanup_background_tasks(app):
     """Cancel background tasks and close database."""
     app["heartbeat_task"].cancel()
-    app["leader_election_task"].cancel()
+    app["leader_election_task"].cancel()  # Cancel leader election task
     await asyncio.gather(
         app["heartbeat_task"], app["leader_election_task"], return_exceptions=True
     )
