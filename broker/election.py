@@ -1,45 +1,82 @@
-# election.py
-
 import asyncio
 import logging
 from util import logger_config
-import random
+from membership import Membership
+
+logger_config.setup_logger()
+
 
 class LeaderElection:
-    def __init__(self, broker_id, peers, failure_chance=0, election_timeout=10):
+    """
+    Implements the Bully Algorithm for leader election in a distributed system.
+    """
+
+    def __init__(self, broker_id, peers, membership_service, election_timeout=10):
+        """
+        :param broker_id: ID of the current broker.
+        :param peers: List of peer broker IDs.
+        :param membership_service: Instance of the Membership class to track brokers.
+        :param election_timeout: Timeout in seconds for waiting for higher ID brokers.
+        """
         self.broker_id = int(broker_id)
-        self.peers = [int(peer) for peer in peers if peer]
+        self.membership_service = membership_service  # Membership instance
+        self.peers = [int(peer) for peer in peers if peer]  # Initial peer list
         self.leader = None
-        self.failure_chance = failure_chance  # Configurable failure chance for peer health check
-        self.election_timeout = election_timeout  # Timeout for waiting for higher ID brokers (seconds)
+        self.election_timeout = election_timeout
+
+    async def update_peers(self):
+        """
+        Updates the list of peers using the Membership service.
+        Excludes the current broker's ID from the peer list.
+        """
+        await self.membership_service.fetch_members()  # Update membership
+        self.peers = [peer for peer in self.membership_service.members if peer != self.broker_id]
+        logging.info(f"Broker {self.broker_id}: Updated peer list: {self.peers}")
 
     async def start_leader_election(self, *_):
-        """Initiate leader election upon startup."""
+        """
+        Starts the leader election process if no leader exists or the current leader is invalid.
+        """
+        await self.update_peers()  # Ensure peers are up-to-date
         if self.leader is None or self.leader not in self.peers:
+            logging.info("Starting leader election process...")
             await self.elect_leader()
-    
+
     async def elect_leader(self):
-        """Bully Election Algorithm to elect a leader."""
-        # Identify brokers with higher IDs
+        """
+        Implements the Bully Election Algorithm to elect a leader.
+        The broker with the highest ID that is alive becomes the leader.
+        """
+        await self.update_peers()  # Refresh peers
         higher_ids = [peer for peer in self.peers if peer > self.broker_id]
-        
+        logging.debug(f"Broker {self.broker_id}: Peers with higher IDs: {higher_ids}")
+
         if not higher_ids:
-            # No higher ID brokers, so this broker becomes the leader
+            # No higher ID brokers; this broker becomes the leader.
             self.leader = self.broker_id
-            logging.info(f"Broker {self.broker_id} elected as leader.")
+            logging.info(f"Broker {self.broker_id} elected as leader (no higher ID peers).")
         else:
-            # Ask higher ID brokers if they are alive (simulated)
+            # Check if higher ID brokers are alive.
             for peer in higher_ids:
                 if await self.is_alive(peer):
-                    # If any higher ID broker is alive, it should take leadership
-                    logging.info(f"Broker {peer} is alive, skipping leader election.")
+                    logging.info(f"Broker {peer} is alive. Broker {self.broker_id} defers election.")
                     return
-        
-            # If no higher IDs are alive, this broker becomes the leader
+
+            # If no higher ID peers are alive, this broker becomes the leader.
             self.leader = self.broker_id
-            logging.info(f"Broker {self.broker_id} elected as leader.")
-    
+            logging.info(f"Broker {self.broker_id} elected as leader (no response from higher ID peers).")
+
     async def is_alive(self, broker_id):
-        """Simulate the check if a higher ID broker is alive (to be replaced by actual health check)."""
-        await asyncio.sleep(0.5)  # Simulating network delay or communication with peer
-        return random.random() > self.failure_chance  # Simulate failure based on configurable chance
+        """
+        Checks if a broker is alive using the Membership service.
+        
+        :param broker_id: The ID of the broker to check.
+        :return: True if the broker is alive, False otherwise.
+        """
+        logging.debug(f"Broker {self.broker_id}: Checking if Broker {broker_id} is alive...")
+        await self.membership_service.fetch_members()  # Update the membership list
+        is_alive = broker_id in self.membership_service.members
+        logging.info(
+            f"Broker {self.broker_id}: Broker {broker_id} is {'alive' if is_alive else 'not alive'}."
+        )
+        return is_alive

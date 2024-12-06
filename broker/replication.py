@@ -1,22 +1,25 @@
-# replication.py
+# File: replication.py
 
 import asyncio
-import logging
 from util import logger_config
+import logging
 import aiohttp
 import json
 
-
 class DataReplication:
-    def __init__(self, data_store, broker_id, peers, port, config_file=None):
+    def __init__(self, data_store, broker_id, port, config_file=None):
+        """
+        :param data_store: Local data store for the broker
+        :param broker_id: ID of the current broker
+        :param port: Local port for this broker
+        :param config_file: Optional configuration file for the spanning tree
+        """
         self.data_store = data_store
         self.broker_id = broker_id
-        self.peers = peers
+        self.peers = []  # Initialize with an empty list; dynamic updates will populate it
         self.port = port  # Local port for this broker
         self.spanning_tree = {}  # Store the spanning tree
-        self.config_file = (
-            "spanning_tree.json"  # Optional config file for static spanning tree
-        )
+        self.config_file = config_file or "spanning_tree.json"  # Config file for static spanning tree
         self.failed_queue = asyncio.Queue()  # Queue for failed replication attempts
 
     async def build_spanning_tree(self):
@@ -45,10 +48,17 @@ class DataReplication:
             logging.error(f"Error decoding JSON from config file: {e}")
 
     def build_dynamic_spanning_tree(self):
-        """Build a dynamic spanning tree using peers (simplified for this example)."""
-        for peer in self.peers:
-            self.spanning_tree[peer] = []  # Initialize empty children list
-        logging.info(f"Dynamic spanning tree built: {self.spanning_tree}")
+        """Build a dynamic spanning tree using the membership list."""
+        self.spanning_tree.clear()
+        sorted_peers = sorted(self.peers)  # Sort to ensure deterministic order
+
+        # Construct a simple BFS-based tree
+        if sorted_peers:
+            root = max(sorted_peers)  # Choose the highest ID as root
+            self.spanning_tree[root] = [peer for peer in sorted_peers if peer != root]
+            logging.info(f"Dynamic spanning tree updated: {self.spanning_tree}")
+        else:
+            logging.warning("No peers available to construct spanning tree.")
 
     async def replicate_message(self, topic, message, message_id):
         """Replicate the message to all peers using the spanning tree."""
@@ -104,3 +114,9 @@ class DataReplication:
         """Stop background tasks on shutdown."""
         app["replication_task"].cancel()
         await app["replication_task"]
+
+    def update_peers(self, peers):
+        """Update the list of peers dynamically."""
+        self.peers = [int(peer) for peer in peers if peer]
+        logging.info(f"Updated peer list: {self.peers}")
+        self.build_dynamic_spanning_tree()
