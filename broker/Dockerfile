@@ -1,20 +1,20 @@
-# Use the official Python image as the base
-FROM python:3.11-slim
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim
 
-# Set the working directory inside the container
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file and install dependencies
-COPY requirements.txt .
+# Copy the current directory contents into the container at /app
+COPY . /app
 
-# Install the Python dependencies
+# Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the broker source code into the container
-COPY . .
+# Expose necessary ports
+# Registry port
+EXPOSE 4000  
+# Broker ports
+EXPOSE 3000-3009  
 
-# Expose the port (we'll use environment variables to set it dynamically)
-EXPOSE 3000-3100
-
-# Run the broker application
-CMD ["python", "broker.py", "--broker_id", "${BROKER_ID}", "--port", "${PORT}", "--peers", "${PEERS}"]
+# Command to start both services (Broker and Registry)
+CMD ["sh", "-c", "python3 registry.py & python3 broker.py"]

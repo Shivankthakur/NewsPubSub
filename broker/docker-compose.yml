@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  registry:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: registry
+    ports:
+      - "4000:4000"
+    networks:
+      - pubsub_network
+    command: python3 registry.py
+
+  broker1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: broker-1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - registry
+    networks:
+      - pubsub_network
+    command: /bin/sh -c "sleep 5 && python3 broker.py --broker_id 1 --port 3000 --registry http://registry:4000"
+
+  broker2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: broker-2
+    ports:
+      - "3001:3001"
+    depends_on:
+      - registry
+    networks:
+      - pubsub_network
+    command: /bin/sh -c "sleep 10 && python3 broker.py --broker_id 2 --port 3001 --registry http://registry:4000"
+
+  broker3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: broker-3
+    ports:
+      - "3002:3002"
+    depends_on:
+      - registry
+    networks:
+      - pubsub_network
+    command: /bin/sh -c "sleep 15 && python3 broker.py --broker_id 3 --port 3002 --registry http://registry:4000"
+
+  broker4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: broker-4
+    ports:
+      - "3003:3003"
+    depends_on:
+      - registry
+    networks:
+      - pubsub_network
+    command: /bin/sh -c "sleep 20 && python3 broker.py --broker_id 4 --port 3003 --registry http://registry:4000"
+
+  broker5:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: broker-5
+    ports:
+      - "3004:3004"
+    depends_on:
+      - registry
+    networks:
+      - pubsub_network
+    command: /bin/sh -c "sleep 25 && python3 broker.py --broker_id 5 --port 3004 --registry http://registry:4000"
+
+  broker6:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: broker-6
+    ports:
+      - "3005:3005"
+    depends_on:
+      - registry
+    networks:
+      - pubsub_network
+    command: /bin/sh -c "sleep 30 && python3 broker.py --broker_id 6 --port 3005 --registry http://registry:4000"
+
+  broker7:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: broker-7
+    ports:
+      - "3006:3006"
+    depends_on:
+      - registry
+    networks:
+      - pubsub_network
+    command: /bin/sh -c "sleep 35 && python3 broker.py --broker_id 7 --port 3006 --registry http://registry:4000"
+
+  broker8:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: broker-8
+    ports:
+      - "3007:3007"
+    depends_on:
+      - registry
+    networks:
+      - pubsub_network
+    command: /bin/sh -c "sleep 40 && python3 broker.py --broker_id 8 --port 3007 --registry http://registry:4000"
+
+  broker9:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: broker-9
+    ports:
+      - "3008:3008"
+    depends_on:
+      - registry
+    networks:
+      - pubsub_network
+    command: /bin/sh -c "sleep 45 && python3 broker.py --broker_id 9 --port 3008 --registry http://registry:4000"
+
+  broker10:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: broker-10
+    ports:
+      - "3009:3009"
+    depends_on:
+      - registry
+    networks:
+      - pubsub_network
+    command: /bin/sh -c "sleep 50 && python3 broker.py --broker_id 10 --port 3009 --registry http://registry:4000"
+
+networks:
+  pubsub_network:
+    driver: bridge
