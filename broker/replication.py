@@ -50,7 +50,9 @@ class DataReplication:
     def build_dynamic_spanning_tree(self):
         """Build a dynamic spanning tree using the membership list."""
         self.spanning_tree.clear()
-        sorted_peers = sorted(self.peers)  # Sort to ensure deterministic order
+        spanning_tree_nodes = self.peers.copy()
+        spanning_tree_nodes.append(int(self.broker_id))  # include self id
+        sorted_peers = sorted(spanning_tree_nodes)  # Sort to ensure deterministic order
 
         # Construct a simple BFS-based tree
         if sorted_peers:
