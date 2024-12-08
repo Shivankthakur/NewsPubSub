@@ -2,7 +2,7 @@
 
 # Distributed Publish-Subscribe System
 
-This project is a distributed publish-subscribe system using 5 broker nodes, implemented in Python and deployed using Docker. The system supports fault tolerance, leader election, and data replication, providing a scalable solution for message publishing and subscribing.
+This project is a distributed publish-subscribe system using 10 broker nodes, implemented in Python and deployed using Docker. The system supports fault tolerance, leader election, and data replication, providing a scalable solution for message publishing and subscribing.
 
 ## **Project Structure**
 
@@ -17,6 +17,8 @@ distributed-pubsub/
 │   ├── election.py                # Leader election algorithm implementation
 │   ├── heartbeat.py               # Heartbeat failure detection mechanism
 │   ├── replication.py             # Data replication mechanism
+│   ├── membership.py              # Maintains membership list
+│   ├── registry.py                # For discovery 
 │   └── requirements.txt           # Python dependencies
 ├── Dockerfile                     # Dockerfile for the broker
 ├── docker-compose.yml             # Docker Compose configuration to run multiple brokers
@@ -32,7 +34,8 @@ distributed-pubsub/
 2. Clone this repository:
    ```bash
    git clone <repository-url>
-   cd distributed-pubsub
+   cd NewsPubSub
+   cd broker
    ```
 
 ### **Running the System**
