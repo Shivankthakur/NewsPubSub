@@ -89,7 +89,7 @@ class DataReplication:
         """Send a message to a peer broker."""
         try:
             peer_port = 3000 + int(peer) - 1  # Assuming ports start from 3000
-            url = f"http://127.0.0.1:{peer_port}/publish"
+            url = f"http://broker-{peer}:{peer_port}/publish"
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     url,

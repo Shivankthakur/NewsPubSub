@@ -50,7 +50,7 @@ class Heartbeat:
     async def is_peer_alive(self, broker_id):
         """Check if a peer is alive by sending an HTTP request."""
         peer_port = 3000 + int(broker_id) - 1  # Map broker ID to port
-        url = f"http://127.0.0.1:{peer_port}/heartbeat"  # Updated endpoint
+        url = f"http://broker-{broker_id}:{peer_port}/heartbeat"  # Updated endpoint
         timeout = ClientTimeout(total=self.failure_timeout)
 
         try:

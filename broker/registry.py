@@ -107,5 +107,5 @@ def dcnews():
 
 
 if __name__ == "__main__":
-    logging.info("Starting Registry Service on port 5000...")
+    logging.info("Starting Registry Service on port 4000...")
     app.run(host="0.0.0.0", port=4000)
