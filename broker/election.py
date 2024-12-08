@@ -2,6 +2,7 @@ import asyncio
 import logging
 from util import logger_config
 from membership import Membership
+import aiohttp
 
 logger_config.setup_logger()
 
@@ -55,6 +56,7 @@ class LeaderElection:
             # No higher ID brokers; this broker becomes the leader.
             self.leader = self.broker_id
             logging.info(f"Broker {self.broker_id} elected as leader (no higher ID peers).")
+            await self.announce_leader()
         else:
             # Check if higher ID brokers are alive.
             for peer in higher_ids:
@@ -65,6 +67,7 @@ class LeaderElection:
             # If no higher ID peers are alive, this broker becomes the leader.
             self.leader = self.broker_id
             logging.info(f"Broker {self.broker_id} elected as leader (no response from higher ID peers).")
+            await self.announce_leader()
 
     async def is_alive(self, broker_id):
         """
@@ -80,3 +83,31 @@ class LeaderElection:
             f"Broker {self.broker_id}: Broker {broker_id} is {'alive' if is_alive else 'not alive'}."
         )
         return is_alive
+
+    async def announce_leader(self):
+        """
+        Notifies all peers about the newly elected leader.
+        """
+        logging.info(f"Broker {self.broker_id}: Announcing leader {self.leader} to peers.")
+        for peer in self.peers:
+            try:
+                await self.send_leader_announcement(peer)
+                logging.info(f"Broker {self.broker_id}: Successfully announced leader to Broker {peer}.")
+            except Exception as e:
+                logging.error(f"Broker {self.broker_id}: Failed to announce leader to Broker {peer}. Error: {e}")
+
+    async def send_leader_announcement(self, peer):
+        """
+        Sends the leader announcement to a peer broker.
+        
+        :param peer: The peer broker ID.
+        """
+        peer_port = 3000 + int(peer) - 1  # Map broker ID to port
+        url = f"http://broker-{peer}:{peer_port}/leader_announcement"
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json={"leader_id": self.leader}) as response:
+                if response.status == 200:
+                    logging.debug(f"Broker {self.broker_id}: Announcement sent to Broker {peer}.")
+                else:
+                    raise Exception(f"Failed to send leader announcement to Broker {peer}.")
+

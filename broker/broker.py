@@ -164,6 +164,31 @@ async def heartbeat_check(request):
     return web.Response(text=f"Broker {BROKER_ID} is healthy and running.")
 
 
+async def leader_announcement(request):
+    """
+    Endpoint for receiving leader announcements from other brokers.
+    
+    Expected JSON payload:
+    {
+        "leader_id": int
+    }
+    """
+    try:
+        data = await request.json()
+        leader_id = data.get("leader_id")
+
+        if leader_id:
+            leader_election.leader = leader_id
+            logging.info(f"Broker {BROKER_ID} acknowledged new leader {leader_id}")
+            return web.json_response({"status": "success", "message": "Leader announced."})
+        else:
+            logging.warning(f"Invalid leader announcement received: {data}")
+            return web.json_response({"status": "error", "message": "Invalid leader announcement."}, status=400)
+    except Exception as e:
+        logging.exception(f"Error in leader announcement route: {e}")
+        return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+
 # Background task for heartbeat and leader election
 async def start_background_tasks(app):
     """Start background tasks."""
@@ -194,6 +219,7 @@ async def start_server():
     app.router.add_get("/heartbeat", heartbeat_check)
     app.router.add_post("/publish", publish)
     app.router.add_get("/data/{topic}", get_data)
+    app.router.add_post("/leader_announcement", leader_announcement)  # New route for leader announcements
     app.on_startup.append(start_background_tasks)
     app.on_cleanup.append(cleanup_background_tasks)
     return app
