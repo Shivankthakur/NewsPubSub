@@ -4,27 +4,46 @@
 
 This project is a distributed publish-subscribe system using 10 broker nodes, implemented in Python and deployed using Docker. The system supports fault tolerance, leader election, and data replication, providing a scalable solution for message publishing and subscribing.
 
+Front-End Repo - https://github.com/Sahil-Mhatre14/PubSub-System
+
+Video Demo - https://youtu.be/7mNXbjLrtFE
+
+- Three publishers publishing different topics
+
+![image](https://github.com/user-attachments/assets/2fef2a9a-530c-485b-bb56-0194ecd4b75a)
+
+
+- Three subscribers receiving messages for subscribed topics
+ 
+![image](https://github.com/user-attachments/assets/c5afd050-6862-48bb-9a25-6e722b3be445)
+
+
+- Broker Logs
+
+![image](https://github.com/user-attachments/assets/066a2761-25be-4237-844e-4f4f852733ea)
+
+![image](https://github.com/user-attachments/assets/f883a5a2-6964-4c62-aaf6-6b2806e4804f)
+
+
+
 ## **Project Structure**
 
 
-
-Project Structure
-
+```
 distributed-pubsub/
-├── broker/
-│   ├── broker.py                  # Main broker application with API endpoints
-│   ├── data_store.py              # Local data store for the broker
-│   ├── election.py                # Leader election algorithm implementation
-│   ├── heartbeat.py               # Heartbeat failure detection mechanism
-│   ├── replication.py             # Data replication mechanism
-│   ├── membership.py              # Maintains membership list
-│   ├── registry.py                # For discovery 
-│   └── requirements.txt           # Python dependencies
-├── Dockerfile                     # Dockerfile for the broker
-├── docker-compose.yml             # Docker Compose configuration to run multiple brokers
-└── README.md                      # Instructions for running the project
-
-
+│-- broker/
+│   │-- broker.py                  # Main broker application with API endpoints
+│   │-- data_store.py              # Local data store for the broker
+│   │-- election.py                # Leader election algorithm implementation
+│   │-- heartbeat.py               # Heartbeat failure detection mechanism
+│   │-- replication.py             # Data replication mechanism
+│   │-- membership.py              # Maintains membership list
+│   │-- registry.py                # For discovery 
+│   └-- requirements.txt           # Python dependencies
+│-- Dockerfile                     # Dockerfile for the broker
+│-- docker-compose.yml             # Docker Compose configuration to run multiple brokers
+└-- README.md                      # Instructions for running the project
+```
 
 ## **Setup Instructions**
 
