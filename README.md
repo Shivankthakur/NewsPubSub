@@ -8,7 +8,7 @@ Front-End Repo: https://github.com/Shivankthakur/PubSub-System
 
 Video Demo [Click on thumbnail to view video]:
 
-[![Video Demo YT Video](https://img.youtube.com/vi/7mNXbjLrtFE/0.jpg)](www.youtube.com)
+[![image](https://img.youtube.com/vi/7mNXbjLrtFE/0.jpg)](https://youtu.be/7mNXbjLrtFE)
 
 ## Project Snippets
 
