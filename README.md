@@ -4,9 +4,13 @@
 
 This project is a distributed publish-subscribe system using 10 broker nodes, implemented in Python and deployed using Docker. The system supports fault tolerance, leader election, and data replication, providing a scalable solution for message publishing and subscribing.
 
-Front-End Repo - https://github.com/Shivankthakur/PubSub-System
+Front-End Repo: https://github.com/Shivankthakur/PubSub-System
 
-Video Demo - https://youtu.be/7mNXbjLrtFE
+Video Demo [Click on thumbnail to view video]:
+
+[![Video Demo YT Video](https://img.youtube.com/vi/7mNXbjLrtFE/0.jpg)](www.youtube.com)
+
+## Project Snippets
 
 - Three publishers publishing different topics
 
